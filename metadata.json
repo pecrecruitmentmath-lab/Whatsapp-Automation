@@ -1,0 +1,5 @@
+{
+  "name": "Recruitment Eligibility Portal",
+  "description": "A portal for users to check recruitment eligibility via mobile number and for admins to manage and export candidate data.",
+  "requestFramePermissions": []
+}

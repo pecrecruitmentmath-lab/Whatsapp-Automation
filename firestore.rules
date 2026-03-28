@@ -1,0 +1,92 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - email: string (required) - The user's email address.
+//   - role: string (required, enum: ['admin', 'user']) - The user's role.
+//
+// Collection: records
+// Document ID: {recordId}
+// Fields:
+//   - mobile: string (required) - The user's mobile number.
+//   - name: string (required) - The user's full name.
+//   - details: string (optional) - Additional details.
+//   - isEligible: boolean (optional) - Whether marked as eligible.
+//   - markedAt: timestamp (optional) - When marked.
+//   - markedBy: string (optional) - UID of the marker.
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "pecrecruitmentmath@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidRecord(data) {
+      return data.keys().hasAll(['mobile', 'name']) &&
+             data.mobile is string &&
+             data.name is string &&
+             (!('isEligible' in data) || data.isEligible is bool);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' || (request.resource.data.role == 'admin' && request.auth.token.email == "pecrecruitmentmath@gmail.com"));
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /records/{recordId} {
+      // Users can only read if they are searching by mobile (simulated via query)
+      // Or if they are an admin
+      allow read: if isAuthenticated();
+      
+      // Only admin can create or delete records (e.g., from Excel)
+      allow create: if isAdmin() && isValidRecord(request.resource.data);
+      allow delete: if isAdmin();
+      
+      // Users can update the 'isEligible' status
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          // User can only update eligibility fields
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isEligible', 'markedAt', 'markedBy']) &&
+          request.resource.data.isEligible == true &&
+          request.resource.data.markedBy == request.auth.uid
+        )
+      );
+    }
+  }
+}

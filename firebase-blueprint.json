@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "UserRecord": {
+      "title": "User Record",
+      "description": "A record representing a user's data associated with their mobile number.",
+      "type": "object",
+      "properties": {
+        "mobile": {
+          "type": "string",
+          "description": "The user's mobile number (unique identifier for lookup)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional details from the Excel file."
+        },
+        "isEligible": {
+          "type": "boolean",
+          "description": "Whether the user has been marked as eligible."
+        },
+        "markedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was marked as eligible."
+        },
+        "markedBy": {
+          "type": "string",
+          "description": "The UID of the user who marked this record."
+        }
+      },
+      "required": ["mobile", "name"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "A profile for an authenticated user, storing their role.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role in the application."
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/records/{recordId}": {
+      "schema": "UserRecord",
+      "description": "Collection of all user records, searchable by mobile number."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles for role-based access control."
+    }
+  }
+}
